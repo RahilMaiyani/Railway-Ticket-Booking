@@ -52,7 +52,7 @@ The **Railway Ticket Booking System (RTBS)** is a Django-based web application f
 ## Installation & Setup
 
 1. Clone the repository
-    git clone https://github.com/YOUR-USERNAME/RTBS_Final.git
+    git clone https://github.com/RahilMaiyni/Railway-Ticket-Booking.git
     cd RTBS_Final
 
 2. Create and activate a virtual environment
