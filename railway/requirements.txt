@@ -1,0 +1,5 @@
+Django>=5
+pandas
+numpy
+scikit-learn
+xhtml2pdf

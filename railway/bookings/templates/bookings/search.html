@@ -1,0 +1,214 @@
+{% extends 'bookings/base.html' %}
+{% block title %}Search Trains{% endblock %}
+{% block content %}
+
+<!-- Search Form -->
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-body">
+    <h4 class="mb-3 fw-bold text-primary">
+      <i class="bi bi-search"></i> Search Trains
+    </h4>
+
+    <form method="post" class="row g-3">
+      {% csrf_token %}
+
+      <!-- Source -->
+      <div class="col-md-5">
+        <label class="form-label fw-semibold">From</label>
+        <select name="source" id="source" class="form-select" required>
+          <option value="">Select source</option>
+          {% for st in stations %}
+            <option value="{{ st.code }}" {% if request.POST.source == st.code %}selected{% endif %}>
+              {{ st.name }} ({{ st.code }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Swap Button -->
+      <div class="col-md-2 d-flex justify-content-center align-items-end">
+        <button type="button" id="swap-btn" class="btn btn-outline-secondary rounded-circle shadow-sm mb-2" title="Swap">
+          <i class="bi bi-arrow-left-right"></i>
+        </button>
+      </div>
+
+      <!-- Destination -->
+      <div class="col-md-5">
+        <label class="form-label fw-semibold">To</label>
+        <select name="destination" id="destination" class="form-select" required>
+          <option value="">Select destination</option>
+          {% for st in stations %}
+            <option value="{{ st.code }}" {% if request.POST.destination == st.code %}selected{% endif %}>
+              {{ st.name }} ({{ st.code }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Date Picker + Quick Select -->
+      <div class="col-md-12 mt-3">
+        <label class="form-label fw-semibold">Date of Journey</label>
+        <div class="d-flex flex-wrap gap-2">
+          <input name="date" id="date" type="date" class="form-control" 
+                 min="{{ today }}" max="{{ max_date }}" 
+                 value="{{ request.POST.date|default:today }}" required
+                 style="max-width: 220px;">
+
+          <button type="button" class="btn btn-outline-primary" id="tomorrow-btn">Tomorrow</button>
+          <button type="button" class="btn btn-outline-primary" id="dayafter-btn">Day After</button>
+        </div>
+      </div>
+
+      <!-- Search Button -->
+      <div class="col-12 text-center mt-4">
+        <button class="btn btn-lg btn-primary px-4 shadow-sm" type="submit">
+          <i class="bi bi-search"></i> Search
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Search Results -->
+{% if results %}
+  <h4 class="fw-bold text-secondary mb-3">Available Trains</h4>
+
+  {% for r in results %}
+    <div class="card border-0 shadow-sm mb-4 hover-card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between flex-wrap align-items-center mb-2">
+          <div>
+            <h5 class="fw-bold mb-1">
+              🚆 {{ r.train.number }} — {{ r.train.name }}
+            </h5>
+            <p class="text-muted small mb-0">
+              {{ request.POST.source }} ➝ {{ request.POST.destination }} | {{ request.POST.date }}
+            </p>
+          </div>
+          <div class="text-end">
+            {% if r.already_left %}
+            <span class="badge bg-danger px-3 py-2">
+                Already Left
+              </span>
+
+            {% endif %}
+            {% if r.duration %}
+              <span class="badge bg-info px-3 py-2">
+                Duration: {{ r.duration }}
+              </span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="row text-center mb-3">
+          <div class="col-md-5">
+            <h6 class="fw-bold mb-0">{{ r.departure_time|default:"—" }}</h6>
+            <small class="text-muted">Departure ({{ request.POST.source }})</small>
+          </div>
+          <div class="col-md-2 d-flex align-items-center justify-content-center">
+            <i class="bi bi-arrow-right fs-4 text-primary"></i>
+          </div>
+          <div class="col-md-5">
+            <h6 class="fw-bold mb-0">{{ r.arrival_time|default:"—" }}</h6>
+            <small class="text-muted">Arrival ({{ request.POST.destination }})</small>
+          </div>
+        </div>
+
+        <hr>
+
+        {% if r.berths %}
+          <div class="table-responsive">
+            <table class="table table-sm align-middle text-center mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Class</th>
+                  <th>Fare (₹)</th>
+                  <th>Seats Left</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for b in r.berths %}
+                <tr>
+                  <td class="fw-semibold">{{ b.berth.name }} ({{ b.berth.code }})</td>
+                  <td>{{ b.fare_per_passenger }}</td>
+                  <td>
+                    <span class="badge 
+                      {% if b.seats_left > 10 %}bg-success
+                      {% elif b.seats_left > 0 %}bg-warning text-dark
+                      {% else %}bg-danger{% endif %}">
+                      {{ b.seats_left }}
+                    </span>
+                  </td>
+                  <td>
+                    {% if b.seats_left > 0 %}
+                      <a href="{% url 'book_train' r.train.id %}?source={{ request.POST.source }}&destination={{ request.POST.destination }}&date={{ request.POST.date }}&berth_code={{ b.berth.code }}" 
+                         class="btn btn-sm btn-outline-primary">
+                        Book
+                      </a>
+                    {% else %}
+                      <button class="btn btn-sm btn-outline-secondary" disabled>Full</button>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="text-muted">No berth information available.</p>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<style>
+  .hover-card {
+    transition: transform 0.2s ease, box-shadow 0.2s;
+  }
+  .hover-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+  }
+  #swap-btn {
+    width: 42px;
+    height: 42px;
+  }
+</style>
+
+<script>
+  // Swap stations
+  document.getElementById("swap-btn").addEventListener("click", function () {
+    let source = document.getElementById("source");
+    let dest = document.getElementById("destination");
+    let temp = source.value;
+    source.value = dest.value;
+    dest.value = temp;
+  });
+
+  // Quick date selectors
+  const tomorrowBtn = document.getElementById("tomorrow-btn");
+  const dayAfterBtn = document.getElementById("dayafter-btn");
+  const dateInput = document.getElementById("date");
+
+  // Default date = today
+  if (!dateInput.value) {
+    const today = new Date().toISOString().split("T")[0];
+    dateInput.value = today;
+  }
+
+  tomorrowBtn.addEventListener("click", function () {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    dateInput.value = tomorrow.toISOString().split("T")[0];
+  });
+
+  dayAfterBtn.addEventListener("click", function () {
+    const dayAfter = new Date();
+    dayAfter.setDate(dayAfter.getDate() + 2);
+    dateInput.value = dayAfter.toISOString().split("T")[0];
+  });
+</script>
+
+{% endblock %}

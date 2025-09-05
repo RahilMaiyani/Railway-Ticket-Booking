@@ -1,0 +1,295 @@
+{% extends 'bookings/base.html' %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block head %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  /* --- Layout & Cards --- */
+  .container-fluid { max-width: 1400px; }
+  .card-small { box-shadow: 0 2px 6px rgba(0,0,0,0.04); background:#fff; border-radius:8px; }
+  .card-header { padding:10px 14px; font-weight:700; color:#0d6efd; background:transparent; border-bottom:none; display:flex; justify-content:space-between; align-items:center; }
+  .card-body { padding:14px; }
+
+  /* --- Topbar --- */
+  .admin-topbar { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .admin-topbar .form-control { min-width:150px; }
+
+  /* --- KPI cards --- */
+  .kpi-row { display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+  .kpi {
+    flex:1 1 150px;
+    padding:12px;
+    border-radius:8px;
+    background: linear-gradient(145deg, #f8fbff, #ffffff);
+    text-align:center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor:default;
+  }
+  .kpi:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+  .kpi .icon { font-size:1.4rem; margin-bottom:4px; color:#0d6efd; }
+  .kpi .label { font-size:0.85rem; color:#6c757d; }
+  .kpi .value { font-size:1.25rem; font-weight:700; color:#0d6efd; margin-top:6px; }
+
+  /* --- Tables --- */
+  .compact-table th, .compact-table td { padding:6px 8px; vertical-align:middle; }
+  .table-wrapper { max-height:220px; overflow-y:auto; }
+  .table-wrapper table { margin-bottom:0; }
+
+  /* --- Chart containers --- */
+  .chart-container { height:300px; position:relative; background:#fff; border-radius:6px; padding:10px; box-shadow: inset 0 0 5px rgba(0,0,0,0.03); }
+  .chart-container--forecast { height:300px; }
+  .chart-container--route { height:160px; }
+  .chart-container--berth { height:140px; }
+
+  @media (max-width:991px) {
+    .kpi { flex:1 1 48%; }
+    .chart-card { min-height:200px; }
+  }
+
+  /* --- Buttons --- */
+  .admin-topbar .btn { font-size:0.85rem; border-radius:5px; }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" style="background:#f5f6fa;">
+  <h3 class="mb-3 text-primary">Admin Dashboard</h3>
+
+  <!-- Topbar -->
+  <div class="card mb-3 card-small shadow-sm">
+    <div class="card-body d-flex justify-content-between align-items-center flex-wrap admin-topbar">
+      <form method="get" class="d-flex align-items-center" style="gap:10px;">
+        <label class="small mb-0">Select date:</label>
+        <input type="date" name="date" class="form-control" value="{{ sel_date }}" />
+        <button class="btn btn-primary">Apply</button>
+      </form>
+
+      <div class="d-flex align-items-center flex-wrap" style="gap:8px;">
+        <a href="{% url 'admin_export_bookings_csv' %}?date={{ sel_date }}" class="btn btn-outline-secondary btn-sm">Export CSV (selected)</a>
+        <a href="{% url 'admin_export_bookings_pdf' %}?date={{ sel_date }}" class="btn btn-outline-secondary btn-sm">Export PDF (selected)</a>
+        <a href="{% url 'admin_export_bookings_csv' %}" class="btn btn-outline-secondary btn-sm">Export CSV (all)</a>
+        <a href="{% url 'admin_export_bookings_pdf' %}" class="btn btn-outline-secondary btn-sm">Export PDF (all)</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI row -->
+  <div class="kpi-row mb-3">
+    <div class="kpi">
+      <div class="label">Bookings (last 30 days)</div>
+      <div id="kpiBookings" class="value">—</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Revenue (last 30 days)</div>
+      <div id="kpiRevenue" class="value">—</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Top route (by revenue)</div>
+      <div id="kpiTopRoute" class="value">—</div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <!-- Left column -->
+    <div class="col-lg-8">
+      <div class="card card-small chart-card mb-3">
+        <div class="card-header">Bookings & Revenue</div>
+        <div class="card-body" style="flex:1 1 auto;">
+          <div class="chart-container">
+            <canvas id="bookingsChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-small chart-card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          7-day Sales Forecast
+          <span class="text-muted small" title="Predicted bookings based on historical data">ℹ️</span>
+        </div>
+        <div class="card-body" style="flex:1 1 auto;">
+          <div class="chart-container chart-container--forecast">
+            <canvas id="forecastChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-small mb-3">
+        <div class="card-header">Trains running on {{ sel_date }}</div>
+        <div class="card-body table-wrapper">
+          <table class="table table-sm compact-table mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Number</th>
+                <th>Name</th>
+                <th>Stops</th>
+                <th>Available</th>
+                <th>Capacity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for t in trains_data %}
+                <tr>
+                  <td>{{ t.number }}</td>
+                  <td>{{ t.name }}</td>
+                  <td>{{ t.stops_count }}</td>
+                  <td>{{ t.total_available }}</td>
+                  <td>{{ t.total_capacity }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="5">No trains found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div class="col-lg-4">
+      <div class="card card-small mb-3">
+        <div class="card-header">Revenue by Route</div>
+        <div class="card-body">
+          <div class="chart-container chart-container--route">
+            <canvas id="routeChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-small mb-3">
+        <div class="card-header">Bookings by Berth Type</div>
+        <div class="card-body">
+          <div class="chart-container chart-container--berth">
+            <canvas id="berthChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-small mb-3">
+        <div class="card-header">Top Customers</div>
+        <div class="card-body small table-wrapper">
+          <table class="table table-sm compact-table mb-0">
+            <thead class="table-light"><tr><th>User</th><th>Bookings</th><th>Revenue</th></tr></thead>
+            <tbody id="topCustomersTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card card-small mb-3">
+        <div class="card-header">Recent Users</div>
+        <div class="card-body table-wrapper">
+          <table class="table table-sm compact-table mb-0">
+            <thead class="table-light"><tr><th>Username</th><th>Email</th><th>Joined</th></tr></thead>
+            <tbody>
+              {% for u in users %}
+                <tr>
+                  <td>{{ u.username }}</td>
+                  <td>{{ u.email|default:"—" }}</td>
+                  <td>{{ u.date_joined|date:"Y-m-d H:i" }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3">No users.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // parse JSON contexts
+  const labelsDates = {{ chart_labels_dates|safe }};
+  const countsDates = {{ chart_counts_dates|safe }};
+  const revenueDates = {{ chart_revenue_dates|safe }};
+  const revenueByRoute = {{ revenue_by_route|safe }};
+  const topCustomers = {{ top_customers|safe }};
+  const berthStats = {{ berth_stats|safe }};
+  const forecastLabels = {{ forecast_labels|safe }};
+  const forecastValues = {{ forecast_values|safe }};
+
+  function safeDestroy(name){
+    try{ if(window[name] && typeof window[name].destroy==='function'){ window[name].destroy(); window[name]=null; } } catch(e){ console.warn('Error destroying chart', name,e); }
+  }
+
+  // --- Fill KPI row ---
+  (function fillKPIs(){
+    const totalBookings = Array.isArray(countsDates) ? countsDates.reduce((s,v)=>s+Number(v||0),0):0;
+    const totalRevenue = Array.isArray(revenueDates) ? revenueDates.reduce((s,v)=>s+Number(v||0),0):0;
+    const topRoute = (Array.isArray(revenueByRoute)&&revenueByRoute.length)?revenueByRoute[0].route:'—';
+    document.getElementById('kpiBookings').textContent = totalBookings;
+    document.getElementById('kpiRevenue').textContent = `₹${totalRevenue.toFixed(2)}`;
+    document.getElementById('kpiTopRoute').textContent = topRoute;
+  })();
+
+  // --- Charts ---
+  (function(){
+    // Bookings chart
+    safeDestroy('bookingsChartInstance');
+    const ctx = document.getElementById('bookingsChart').getContext('2d');
+    window.bookingsChartInstance = new Chart(ctx,{
+      type:'bar',
+      data:{
+        labels:labelsDates,
+        datasets:[
+          {type:'line', label:'Bookings', data:countsDates, tension:0.2, borderWidth:2, fill:false},
+          {type:'bar', label:'Revenue (₹)', data:revenueDates, yAxisID:'y_revenue'}
+        ]
+      },
+      options:{
+        maintainAspectRatio:false,
+        responsive:true,
+        interaction:{mode:'index', intersect:false},
+        scales:{
+          y:{title:{display:true,text:'Bookings'}},
+          y_revenue:{position:'right',title:{display:true,text:'Revenue (₹)'}, grid:{drawOnChartArea:false}}
+        }
+      }
+    });
+
+    // Revenue by route
+    safeDestroy('routeChartInstance');
+    const labelsRoute = (revenueByRoute||[]).slice(0,5).map(r=>r.route);
+    const dataRoute = (revenueByRoute||[]).slice(0,5).map(r=>r.revenue);
+    const ctxRoute = document.getElementById('routeChart').getContext('2d');
+    window.routeChartInstance = new Chart(ctxRoute,{type:'bar',data:{labels:labelsRoute,datasets:[{label:'Revenue',data:dataRoute}]}, options:{indexAxis:'y', maintainAspectRatio:false,responsive:true}});
+
+    // Berth pie
+    safeDestroy('berthChartInstance');
+    const labelsBerth = (berthStats||[]).map(b=>b.berth);
+    const dataBerth = (berthStats||[]).map(b=>b.count);
+    const ctxBerth = document.getElementById('berthChart').getContext('2d');
+    window.berthChartInstance = new Chart(ctxBerth,{type:'pie',data:{labels:labelsBerth,datasets:[{data:dataBerth}]},options:{maintainAspectRatio:false,responsive:true}});
+
+    // Forecast chart
+    safeDestroy('forecastChartInstance');
+    if(forecastLabels && forecastLabels.length){
+      const ctxF = document.getElementById('forecastChart').getContext('2d');
+      window.forecastChartInstance = new Chart(ctxF,{
+        type:'line',
+        data:{labels:forecastLabels,datasets:[{label:'Predicted bookings',data:forecastValues,borderDash:[5,4],tension:0.2}]},
+        options:{maintainAspectRatio:false,responsive:true,scales:{y:{beginAtZero:true}}}
+      });
+    } else {
+      document.getElementById('forecastChart').parentElement.innerHTML="<p class='small text-muted'>Insufficient data for forecast.</p>";
+    }
+
+  })();
+
+  // --- Fill top customers table ---
+  (function fillTopCustomers(){
+    const tbody = document.getElementById('topCustomersTbody');
+    if(!topCustomers || !topCustomers.length){
+      tbody.innerHTML="<tr><td colspan='3'>No data</td></tr>";
+      return;
+    }
+    tbody.innerHTML = topCustomers.map(t=>`<tr><td>${t.username}</td><td>${t.bookings}</td><td>₹${Number(t.revenue||0).toFixed(2)}</td></tr>`).join('');
+  })();
+</script>
+{% endblock %}

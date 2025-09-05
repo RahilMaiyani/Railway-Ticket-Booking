@@ -1,0 +1,158 @@
+{% extends "bookings/base.html" %}
+
+{% block title %}Book {{ train.number }} — {{ train.name }}{% endblock %}
+
+{% block content %}
+<div class="card shadow-lg border-0">
+  <div class="card-body">
+    <!-- Header -->
+    <h3 class="fw-bold text-primary mb-3">
+      <i class="bi bi-ticket-detailed"></i> Book Ticket
+    </h3>
+    <h5 class="text-muted mb-4">
+      {{ train.number }} — {{ train.name }}
+    </h5>
+
+    <!-- Passenger Form -->
+    <form method="post" id="booking-form" class="mb-3">
+      {% csrf_token %}
+
+      <h5 class="fw-semibold mb-3 text-secondary">
+        <i class="bi bi-person-lines-fill"></i> Passenger Details
+      </h5>
+
+      <div id="passenger-forms">
+        {{ formset.management_form }}
+        {% for form in formset.forms %}
+        <div class="passenger-item mb-3 p-3 border rounded bg-light shadow-sm passenger-card">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold text-muted">{{ form.name.label }}</label>
+              {{ form.name }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold text-muted">{{ form.age.label }}</label>
+              {{ form.age }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold text-muted">{{ form.gender.label }}</label>
+              {{ form.gender }}
+            </div>
+            <div class="col-md-2 d-flex align-items-center">
+              <button type="button" class="btn btn-outline-danger btn-sm remove-passenger w-100">
+                <i class="bi bi-person-dash"></i> Remove
+              </button>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Add Passenger Button -->
+      <div class="mb-4">
+        <button type="button" id="add-passenger" class="btn btn-outline-primary rounded-pill px-3">
+          <i class="bi bi-person-plus"></i> Add Passenger
+        </button>
+        <small class="text-muted ms-2">Maximum 5 passengers.</small>
+      </div>
+
+      <!-- Hidden search context -->
+      <input type="hidden" name="source" value="{{ source|default:'' }}">
+      <input type="hidden" name="destination" value="{{ destination|default:'' }}">
+      <input type="hidden" name="date" value="{{ date|default:'' }}">
+      <input type="hidden" name="berth_code" value="{{ berth_code|default:'' }}">
+
+      <!-- Action buttons -->
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary px-4" type="submit">
+          Continue to Preview <i class="bi bi-arrow-right-circle ms-1"></i>
+        </button>
+        <a class="btn btn-outline-secondary px-4" href="{% url 'search_trains' %}">
+          <i class="bi bi-arrow-left-circle"></i> Back to Search
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- JS for Add/Remove Passenger -->
+<script>
+  (function () {
+    const addBtn = document.getElementById("add-passenger");
+    const formsContainer = document.getElementById("passenger-forms");
+    const totalFormsInput =
+      document.querySelector("#id_{{ formset.prefix }}-TOTAL_FORMS") ||
+      document.querySelector('input[name="{{ formset.management_form.prefix }}-TOTAL_FORMS"]') ||
+      document.querySelector('input[name="form-TOTAL_FORMS"]');
+
+    function getTotalForms() {
+      return parseInt(totalFormsInput.value, 10);
+    }
+    function setTotalForms(n) {
+      totalFormsInput.value = String(n);
+    }
+
+    // Add Passenger
+    addBtn.addEventListener("click", function () {
+      let total = getTotalForms();
+      if (total >= 5) {
+        alert("Maximum 5 passengers allowed.");
+        return;
+      }
+      const last = formsContainer.querySelectorAll(".passenger-item")[formsContainer.querySelectorAll(".passenger-item").length - 1];
+      const clone = last.cloneNode(true);
+
+      clone.querySelectorAll("input, select, textarea, label").forEach(function (node) {
+        if (node.name) {
+          node.name = node.name.replace(/-\d+-/, "-" + total + "-");
+        }
+        if (node.id) {
+          node.id = node.id.replace(/-\d+-/, "-" + total + "-");
+        }
+        if (node.htmlFor) {
+          node.htmlFor = node.htmlFor.replace(/-\d+-/, "-" + total + "-");
+        }
+        if (node.tagName === "INPUT") {
+          if (node.type === "text" || node.type === "number") node.value = "";
+          if (node.type === "checkbox" || node.type === "radio") node.checked = false;
+        } else if (node.tagName === "SELECT") {
+          node.selectedIndex = 0;
+        }
+      });
+
+      formsContainer.appendChild(clone);
+      setTotalForms(total + 1);
+      attachRemoveButtons();
+    });
+
+    // Remove Passenger
+    function attachRemoveButtons() {
+      const removeBtns = formsContainer.querySelectorAll(".remove-passenger");
+      removeBtns.forEach(btn => {
+        btn.onclick = function () {
+          if (formsContainer.querySelectorAll(".passenger-item").length > 1) {
+            btn.closest(".passenger-item").remove();
+            setTotalForms(getTotalForms() - 1);
+          } else {
+            alert("At least one passenger is required.");
+          }
+        };
+      });
+    }
+
+    // Initial bind
+    attachRemoveButtons();
+  })();
+</script>
+
+<!-- Custom Styling -->
+<style>
+  .passenger-card {
+    transition: transform 0.2s ease, box-shadow 0.2s;
+  }
+  .passenger-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+  }
+</style>
+{% endblock %}

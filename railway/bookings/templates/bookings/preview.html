@@ -1,0 +1,115 @@
+{% extends 'bookings/base.html' %}
+{% block title %}Booking Preview{% endblock %}
+{% block content %}
+
+<style>
+    /* Fade-in animation for card */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .preview-card {
+        animation: fadeInUp 0.6s ease-in-out;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .preview-header {
+        background: linear-gradient(135deg, #004085, #0069d9);
+        color: #fff;
+        padding: 20px;
+        text-align: center;
+    }
+    .preview-header h4 {
+        margin: 0;
+        font-weight: bold;
+    }
+    .preview-header small {
+        font-size: 13px;
+        opacity: 0.9;
+    }
+
+    .train-info p {
+        margin-bottom: 8px;
+        font-size: 14px;
+        color: #444;
+    }
+    .train-info i {
+        color: #0069d9;
+    }
+
+    .fare-box {
+        background: #f8f9fa;
+        border-left: 4px solid #28a745;
+        padding: 12px 15px;
+        margin-top: 20px;
+        border-radius: 6px;
+    }
+
+    .pay-btn {
+        transition: all 0.3s ease;
+        font-size: 18px;
+    }
+    .pay-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4);
+    }
+</style>
+
+<div class="container my-5">
+    <div class="card shadow preview-card">
+        <!-- Header -->
+        <div class="preview-header">
+            <h4>Booking Preview</h4>
+            <small>Review your details before payment</small>
+        </div>
+
+        <!-- Body -->
+        <div class="card-body px-4 py-4">
+            <div class="train-info">
+                <h5 class="fw-bold text-dark mb-3">
+                    {{ booking.train.number }} — {{ booking.train.name }}
+                </h5>
+                <p>
+                    <i class="bi bi-calendar-event"></i>
+                    <strong> Date of Journey:</strong> {{ booking.date_of_journey }}
+                </p>
+                <p>
+                    <i class="bi bi-geo-alt-fill text-danger"></i>
+                    <strong>From:</strong> {{ booking.source }}
+                    &nbsp; <i class="bi bi-arrow-right mx-1"></i> &nbsp;
+                    <i class="bi bi-geo-alt-fill text-success"></i>
+                    <strong>To:</strong> {{ booking.destination }}
+                </p>
+                <p>
+                    <i class="bi bi-door-open"></i>
+                    <strong>Berth:</strong> {{ booking.berth_type.name }} ({{ booking.berth_type.code }})
+                </p>
+                <p>
+                    <i class="bi bi-people-fill"></i>
+                    <strong>Passengers:</strong> {{ booking.passengers_count }}
+                </p>
+            </div>
+
+            <!-- Fare -->
+            <div class="fare-box mt-3">
+                <h5 class="mb-0 fw-semibold text-dark">
+                    Total Fare: <span class="text-success">₹{{ booking.total_fare }}</span>
+                </h5>
+            </div>
+
+            <!-- Pay Button -->
+            <form method="post" action="{% url 'mock_pay' booking.id %}">
+                {% csrf_token %}
+                <div class="text-center mt-4">
+                    <button class="btn btn-success btn-lg px-5 pay-btn">
+                        <i class="bi bi-credit-card"></i> Pay & Confirm
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { font-family: DejaVu Sans, Arial, sans-serif; font-size:12px; }
+    h2 { font-size:16px; }
+    table { width:100%; border-collapse: collapse; margin-top:8px; }
+    th, td { border: 1px solid #ddd; padding:6px; font-size:11px; }
+    th { background:#f4f4f4; text-align:left; }
+  </style>
+</head>
+<body>
+  <h2>{{ title }}</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th><th>User</th><th>Train</th><th>Route</th><th>Date</th><th>Passengers</th><th>Fare</th><th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in bookings %}
+        <tr>
+          <td>{{ b.id }}</td>
+          <td>{{ b.user }}</td>
+          <td>{{ b.train }}</td>
+          <td>{{ b.source }} → {{ b.destination }}</td>
+          <td>{{ b.date_of_journey }}</td>
+          <td>{{ b.passengers }}</td>
+          <td>Rs. {{ b.fare }}</td>
+          <td>{{ b.status }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8">No bookings found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

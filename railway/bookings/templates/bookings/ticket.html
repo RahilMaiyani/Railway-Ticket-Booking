@@ -1,0 +1,140 @@
+{% extends 'bookings/base.html' %}
+{% block title %}Ticket — {{ booking.id }}{% endblock %}
+{% block content %}
+
+<style>
+  /* Smooth fade-in animation */
+  @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+  }
+
+  .ticket-card {
+      animation: fadeInUp 0.6s ease-in-out;
+      border-radius: 10px;
+      overflow: hidden;
+  }
+
+  .ticket-header {
+      background: linear-gradient(135deg, #004085, #0069d9);
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+  }
+  .ticket-header h4 {
+      margin: 0;
+      font-weight: bold;
+  }
+  .ticket-header small {
+      font-size: 13px;
+      opacity: 0.9;
+  }
+
+  .status-badge {
+      font-size: 14px;
+      padding: 6px 12px;
+      border-radius: 30px;
+  }
+
+  .fare-box {
+      background: #f8f9fa;
+      border-left: 4px solid #28a745;
+      padding: 12px 15px;
+      border-radius: 6px;
+      margin-top: 10px;
+      text-align: right;
+  }
+
+  .passenger-table th {
+      background: #f1f5f9;
+  }
+
+  .hover-btn {
+      transition: all 0.3s ease;
+  }
+  .hover-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+  }
+</style>
+
+<div class="container my-5">
+  <div class="card shadow ticket-card">
+    
+    <!-- Header -->
+    <div class="ticket-header">
+      <h4><i class="bi bi-ticket-perforated"></i> Ticket — Booking #{{ booking.id }}</h4>
+      <small>Keep this ticket for your journey</small>
+    </div>
+
+    <!-- Body -->
+    <div class="card-body p-4">
+
+      <!-- Train & Route -->
+      <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap">
+        <div>
+          <h5 class="fw-bold mb-1">
+            🚆 {{ booking.train.number }} — {{ booking.train.name }}
+          </h5>
+          <p class="text-muted small mb-1">
+            {{ booking.source }} → {{ booking.destination }}
+          </p>
+          <p class="small mb-0">
+            <strong>Date:</strong> {{ booking.date_of_journey }} <br>
+            <strong>Berth:</strong> {{ booking.berth_type.name }} ({{ booking.berth_type.code }})
+          </p>
+        </div>
+        <div class="text-end">
+          <span class="status-badge
+            {% if booking.status == 'CONFIRMED' %} bg-success text-white
+            {% elif booking.status == 'PENDING' %} bg-warning text-dark
+            {% elif booking.status == 'CANCELLED' %} bg-danger text-white
+            {% else %} bg-secondary text-white {% endif %}">
+            {{ booking.status }}
+          </span>
+          <div class="fare-box">
+            <h6 class="fw-semibold text-dark mb-0">₹{{ booking.total_fare }}</h6>
+          </div>
+        </div>
+      </div>
+
+      <hr>
+
+      <!-- Passenger Details -->
+      <h6 class="fw-bold mb-2"><i class="bi bi-people"></i> Passengers</h6>
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered align-middle text-center passenger-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Age</th>
+              <th>Seat</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in booking.passengers.all %}
+              <tr>
+                <td class="fw-semibold">{{ p.name }}</td>
+                <td>{{ p.age }}</td>
+                <td>{{ p.seat_number|default:"(TBA)" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Actions -->
+      <div class="mt-4 d-flex justify-content-between flex-wrap gap-2">
+        <a href="{% url 'my_bookings' %}" class="btn btn-outline-secondary hover-btn">
+          <i class="bi bi-arrow-left"></i> Back to Bookings
+        </a>
+        <a href="{% url 'download_ticket' booking.pk %}" class="btn btn-success hover-btn">
+          <i class="bi bi-download"></i> Download Ticket
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}
