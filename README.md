@@ -1,125 +1,96 @@
+# Railway Ticket Booking System (RTBS)
 
-# Railway Ticket Booking System (Django + ML)
-
-A Railway Ticket Booking System built with **Django 5**, **SQLite**, and a lightweight **ML forecasting** pipeline using **pandas**, **NumPy**, and **scikit-learn**.  
-The system supports train search, real-time availability, booking, and ticketing, with a **rich Admin Dashboard** that includes KPIs, trend charts, and a **7‑day passenger forecast**.
-
----
-
-## ✨ Features
-
-### User-facing
-- **Search Trains** by source, destination, and date.  
-  ![Search Trains](Screenshot (17).png)
-
-- **Available Trains** list with berth-wise availability and fare calculation.  
-  ![Available Trains](Screenshot (18).png)
-
-- **Booking Form** with passenger details (1–5 passengers).  
-  ![Booking Form](Screenshot (19).png)
-
-- **Ticket Preview & Confirmation** with breakdown of fare + GST/fees.  
-  ![Ticket Preview](Screenshot (20).png)
-
-- **My Bookings** section for history and ticket management.  
-  ![My Bookings](Screenshot (21).png)
-
-- **Login/Registration** with age validation (18+).  
-  ![Login Page](Screenshot (24).png)
-
-### Admin Panel (Staff Only)
-- **KPIs**: total trains, available seats, bookings.  
-  ![Admin Dashboard KPIs](Screenshot (22).png)
-
-- **Forecasting**: passenger demand for the next 7 days using Linear Regression, weekend uplift, and zero-booking filtering.  
-  ![Admin Dashboard Forecast](Screenshot (23).png)
-
-- **Bookings Export (PDF)** for selected date ranges.
+## Overview
+The **Railway Ticket Booking System (RTBS)** is a Django-based web application for searching, booking, and managing train tickets. It includes an Admin Dashboard with integrated machine learning forecasting to analyze and predict passenger booking patterns.
 
 ---
 
-## 🧠 Machine Learning Forecasting
+## Features
 
-- Uses historical daily bookings for regression.  
-- Ignores **zero-booking days** (to avoid bias).  
-- Adds a **weekend uplift** (+25%) to reflect demand spikes.  
-- Predictions are **clamped to non-negative** and never below current bookings.
+### Passenger Module
+- User registration & authentication (login/signup).  
+- Train search by source, destination, and date.  
+- Real-time ticket booking & seat allocation.  
+- Booking history and ticket management.
 
----
+### Admin Panel
+- Interactive dashboard with charts (Chart.js).  
+- Manage trains, schedules, and bookings.  
+- Revenue, passenger trends, and booking statistics.  
+- ML-powered demand forecasting to predict passenger counts and optimize operations.
 
-## 🧱 Tech Stack
-
-- **Backend**: Django 5, Django ORM, Custom User Model  
-- **Database**: SQLite (default; can switch to PostgreSQL/MySQL)  
-- **ML**: pandas, NumPy, scikit‑learn (LinearRegression)  
-- **Frontend**: Django Templates + Bootstrap 5 + Chart.js  
-- **PDF Export**: xhtml2pdf  
-
----
-
-## 🚀 Local Setup
-
-### 1. Create virtual environment
-```bash
-python -m venv .venv
-# Activate
-.\.venv\Scripts\activate   # Windows
-source .venv/bin/activate     # macOS/Linux
-```
-
-### 2. Install dependencies
-```bash
-pip install -r railway/requirements.txt
-```
-
-### 3. Migrate database
-```bash
-cd railway
-python manage.py migrate
-python manage.py createsuperuser
-```
-
-### 4. Run server
-```bash
-python manage.py runserver
-```
-Visit: `http://127.0.0.1:8000/`  
-Admin Dashboard: `http://127.0.0.1:8000/admin-dashboard/`
+### Machine Learning Integration
+- Historical booking data is processed using pandas/NumPy.  
+- Uses scikit-learn (LinearRegression) for short-term passenger forecasting.  
+- Zero-booking dates are filtered to improve model accuracy.  
+- Simple weekend uplift and lower-bound guards are applied to predictions.
 
 ---
 
-## 📸 Screenshots
-
-Below are the main system views:
-
-- Search Trains  
-  ![Search Trains](Screenshot (17).png)
-
-- Available Trains  
-  ![Available Trains](Screenshot (18).png)
-
-- Booking Form  
-  ![Booking Form](Screenshot (19).png)
-
-- Ticket Preview  
-  ![Ticket Preview](Screenshot (20).png)
-
-- My Bookings  
-  ![My Bookings](Screenshot (21).png)
-
-- Login Page  
-  ![Login Page](Screenshot (24).png)
-
-- Admin Dashboard (KPIs)  
-  ![Admin Dashboard KPIs](Screenshot (22).png)
-
-- Admin Dashboard (Forecast)  
-  ![Admin Dashboard Forecast](Screenshot (23).png)
+## Tech Stack
+- **Backend:** Django (Python)  
+- **Frontend:** HTML, CSS, Bootstrap, JavaScript (Chart.js)  
+- **Database:** SQLite3 (development; swap to PostgreSQL for production)  
+- **Machine Learning:** pandas, NumPy, scikit-learn  
+- **PDF Export:** xhtml2pdf (for booking exports)  
+- **Editor:** VS Code
 
 ---
 
-## 🔮 Future Improvements
-- Switch DB to PostgreSQL for scalability.  
-- Improve forecasting with ARIMA/Prophet models.  
-- Add payment gateway integration.  
-- Role-based access for staff vs super-admins.
+## Project Structure
+    RTBS/
+    │── bookings/          # Django app for bookings (models, views, templates)
+    │── static/            # CSS, JS, images
+    │── templates/         # HTML templates
+    │── manage.py          # Django entry point
+    │── db.sqlite3         # Development DB (should be in .gitignore)
+    │── requirements.txt   # Python dependencies
+    │── README.md          # This file
+
+---
+
+## Installation & Setup
+
+1. Clone the repository
+    git clone https://github.com/YOUR-USERNAME/RTBS_Final.git
+    cd RTBS_Final
+
+2. Create and activate a virtual environment
+    python -m venv venv
+    # On Windows
+    venv\Scripts\activate
+    # On macOS / Linux
+    # source venv/bin/activate
+
+3. Install dependencies
+    pip install -r requirements.txt
+
+4. Apply database migrations
+    python manage.py makemigrations
+    python manage.py migrate
+
+5. Create an admin user
+    python manage.py createsuperuser
+
+6. Run the development server
+    python manage.py runserver
+
+Open: http://127.0.0.1:8000/  
+Admin dashboard (staff only): http://127.0.0.1:8000/admin-dashboard/
+
+---
+
+## Admin Dashboard (Highlights)
+- Dashboard KPIs: total trains, seats, bookings for selected date.  
+- Booking trends visualized for recent days; zero-booking days are ignored when producing trend lines.  
+- 7-day passenger forecast (linear regression on day number, weekend uplift, clamped to sensible lower bounds).  
+- Export bookings for a date range to PDF.
+
+---
+
+## Future Improvements
+- Move to PostgreSQL for production.  
+- Replace xhtml2pdf with WeasyPrint or another robust renderer if high-quality PDFs are required.  
+- Enhance forecasting with ARIMA/Prophet or a small neural net; persist predictions via a scheduled job (cron/Celery).  
+- Add payment gateway integration (Razorpay / Stripe) and transactional email/SMS confirmations.  
+- Add role-based access and pagination/filtering for admin exports.
